@@ -1,9 +1,13 @@
 import datetime as dt
-from flask import Flask, render_template, redirect
-from flask_login import LoginManager, login_required, login_user, logout_user
+from flask import abort, Flask, jsonify, render_template, redirect, request, session
+from flask_login import AnonymousUserMixin, current_user, LoginManager, login_required, login_user, logout_user, UserMixin
 from data import db_session
+from data.goods import Goods
 from data.users import User
+from forms.goods import GoodsForm
 from forms.user import LoginForm, RegisterForm
+import sqlalchemy as sa
+import sqlalchemy.exc
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
@@ -12,6 +16,8 @@ app.config['PERMANENT_SESSION_LIFETIME'] = dt.timedelta(days=365)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+db_session.global_init('db/sports.db')
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -19,13 +25,17 @@ def load_user(user_id):
     return db_sess.get(User, user_id)
 
 
+@app.errorhandler(401)
+def unathorized():
+    return render_template('401.html')
+
+
 @app.route('/register/', methods={'GET', 'POST'})
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
         if form.password.data != form.password_again.data:
-            return render_template('register.html', title='Регистрация', form=form,
-                                   message='Пароли не совпадают')
+            return render_template('register.html', title='Регистрация', form=form, message='Пароли не совпадают')
         db_sess = db_session.create_session()
         if db_sess.query(User).filter(User.email == form.email.data).first():
             return render_template('register.html', title='Регистрация', form=form,
@@ -38,7 +48,7 @@ def register():
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
-        return redirect('/login')
+        return redirect('/login/')
     return render_template('register.html', title='Регистрация', form=form)
 
 
@@ -62,6 +72,27 @@ def logout():
     return redirect('/')
 
 
+@app.route('/goods/', methods={'GET', 'POST'})
+@login_required
+def add_goods():
+    form = GoodsForm()
+    if not current_user.is_authenticated or current_user.id != 1:
+        return render_template('401.html')
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        goods = Goods(
+            name=form.name.data,
+            price=form.price.data,
+        )
+        try:
+            db_sess.add(goods)
+            db_sess.commit()
+        except sa.exc.IntegrityError:
+            return render_template('conflict.html')
+        return redirect('/')
+    return render_template('goods.html', title='Добавление товара', form=form)
+
+
 @app.route('/')
 def index():
     kwargs = {
@@ -71,7 +102,6 @@ def index():
 
 
 def main():
-    db_session.global_init('db/sports.db')
     app.run(host='127.0.0.1', port=8080)
 
 
