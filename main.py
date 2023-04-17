@@ -26,7 +26,7 @@ def load_user(user_id):
 
 
 @app.errorhandler(401)
-def unathorized():
+def unauthorized():
     return render_template('401.html')
 
 
@@ -77,20 +77,41 @@ def logout():
 def add_goods():
     form = GoodsForm()
     if not current_user.is_authenticated or current_user.id != 1:
-        return render_template('401.html')
+        return unauthorized()
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         goods = Goods(
             name=form.name.data,
+            category=form.category.data,
+            desc=form.description.data,
             price=form.price.data,
         )
         try:
             db_sess.add(goods)
             db_sess.commit()
+            goods.set_image()
+            db_sess.commit()
         except sa.exc.IntegrityError:
             return render_template('conflict.html')
         return redirect('/')
     return render_template('goods.html', title='Добавление товара', form=form)
+
+
+@app.route('/catalogue/')
+def catalogue():
+    db_sess = db_session.create_session()
+    goods_list = db_sess.query(Goods).all()
+    categories = {}
+    for goods in goods_list:
+        if goods.category not in categories:
+            categories[goods.category] = [goods]
+        else:
+            categories[goods.category].append(goods)
+    kwargs = {
+        'title': 'Каталог',
+        'catalogue': categories,
+    }
+    return render_template('catalogue.html', **kwargs)
 
 
 @app.route('/')

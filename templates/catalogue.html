@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+    {% for category in catalogue %}
+        <h2> {{ category.name }} </h2>
+        <div class="card-group">
+            {% for goods in catalogue[category] %}
+                {% if loop.index <= 6 %}
+                    <a href="/{{ goods.id }}">
+                        <div class="card">
+                            <img src="{{ goods.image }}" class="card-img-top img-thumbnail">
+                            <div class="card-body">
+                                <h5 class="card-title"> {{ goods.name }} </h5>
+                                <p class="card-text"> {{ goods.desc }} </p>
+                            </div>
+                        </div>
+                    </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endfor %}
+{% endblock %}
