@@ -1,21 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
     {% for category in catalogue %}
-        <h2> {{ category.name }} </h2>
-        <div class="card-group">
-            {% for goods in catalogue[category] %}
-                {% if loop.index <= 6 %}
-                    <a href="/{{ goods.id }}">
-                        <div class="card">
-                            <img src="{{ goods.image }}" class="card-img-top img-thumbnail">
-                            <div class="card-body">
-                                <h5 class="card-title"> {{ goods.name }} </h5>
-                                <p class="card-text"> {{ goods.desc }} </p>
+        <p>
+            <div class="container">
+                <h2> {{ category }} </h2>
+                <div class="row row-cols-md-6">
+                    {% for goods in catalogue[category] %}
+                        {% if loop.index <= 6 %}
+                            <div class="col">
+                                <div class="card">
+                                    <img src="{{ goods.image }}" class="card-img-top">
+                                    <div class="card-body">
+                                        <h5 class="card-title"> {{ goods.name }} </h5>
+                                        <p class="card-text"> {{ goods.desc }} </p>
+                                        <a href="/goods/{{ goods.id }}" class="card-link"> Посмотреть </a>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </a>
-                {% endif %}
-            {% endfor %}
-        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </p>
     {% endfor %}
 {% endblock %}

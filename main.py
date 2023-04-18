@@ -27,7 +27,7 @@ def load_user(user_id):
 
 @app.errorhandler(401)
 def unauthorized():
-    return render_template('401.html')
+    return render_template('error.html', message='У вас нет права на доступ к этой странице!')
 
 
 @app.route('/register/', methods={'GET', 'POST'})
@@ -72,7 +72,7 @@ def logout():
     return redirect('/')
 
 
-@app.route('/goods/', methods={'GET', 'POST'})
+@app.route('/add_goods/', methods={'GET', 'POST'})
 @login_required
 def add_goods():
     form = GoodsForm()
@@ -80,21 +80,30 @@ def add_goods():
         return unauthorized()
     if form.validate_on_submit():
         db_sess = db_session.create_session()
-        goods = Goods(
+        new_goods = Goods(
             name=form.name.data,
             category=form.category.data,
             desc=form.description.data,
             price=form.price.data,
         )
         try:
-            db_sess.add(goods)
+            db_sess.add(new_goods)
             db_sess.commit()
-            goods.set_image()
+            new_goods.set_image()
             db_sess.commit()
         except sa.exc.IntegrityError:
             return render_template('conflict.html')
         return redirect('/')
-    return render_template('goods.html', title='Добавление товара', form=form)
+    return render_template('add_goods.html', title='Добавление товара', form=form)
+
+
+@app.route('/goods/<int:id_>')
+def goods(id_):
+    db_sess = db_session.create_session()
+    found_goods = db_sess.get(Goods, id_)
+    if not found_goods:
+        return render_template('error.html', message='Товара с данным id не существует!')
+    return render_template('goods.html', goods=found_goods)
 
 
 @app.route('/catalogue/')
@@ -102,11 +111,11 @@ def catalogue():
     db_sess = db_session.create_session()
     goods_list = db_sess.query(Goods).all()
     categories = {}
-    for goods in goods_list:
+    for goods_ in goods_list:
         if goods.category not in categories:
-            categories[goods.category] = [goods]
+            categories[goods_.category] = [goods_]
         else:
-            categories[goods.category].append(goods)
+            categories[goods_.category].append(goods_)
     kwargs = {
         'title': 'Каталог',
         'catalogue': categories,
