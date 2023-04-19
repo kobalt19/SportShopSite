@@ -5,9 +5,10 @@ from .db_session import SqlAlchemyBase
 
 
 class Order(SqlAlchemyBase):
-    __tablename__ = 'order'
+    __tablename__ = 'orders'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'))
     goods = sa.Column(sa.String, nullable=True)
     delivery_date = sa.Column(sa.Date, default=dt.datetime.now().date())
+    completed = sa.Column(sa.Boolean, default=False)
     user = orm.relationship('User')

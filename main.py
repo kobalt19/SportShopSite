@@ -1,10 +1,13 @@
 import datetime as dt
 from flask import abort, Flask, jsonify, render_template, redirect, request, session
-from flask_login import AnonymousUserMixin, current_user, LoginManager, login_required, login_user, logout_user, UserMixin
+from flask_login import AnonymousUserMixin, current_user, LoginManager, login_required, login_user, logout_user, \
+    UserMixin
 from data import db_session
 from data.goods import Goods
+from data.order import Order
 from data.users import User
 from forms.goods import GoodsForm
+from forms.order import OrderForm
 from forms.user import LoginForm, RegisterForm
 import sqlalchemy as sa
 import sqlalchemy.exc
@@ -112,7 +115,7 @@ def catalogue():
     goods_list = db_sess.query(Goods).all()
     categories = {}
     for goods_ in goods_list:
-        if goods.category not in categories:
+        if goods_.category not in categories:
             categories[goods_.category] = [goods_]
         else:
             categories[goods_.category].append(goods_)
@@ -121,6 +124,70 @@ def catalogue():
         'catalogue': categories,
     }
     return render_template('catalogue.html', **kwargs)
+
+
+@app.route('/add_to_order/<int:id_>', methods={'POST'})
+def add_to_order(id_):
+    db_sess = db_session.create_session()
+    current_order = db_sess.get(Order, session['current_order'])
+    if not current_order or 'current_order' not in session:
+        current_order = db_sess.query(Order).filter(Order.user_id == current_user.id).first()
+        if current_order:
+            session['current_order'] = current_order.id
+        else:
+            order_ = Order(user_id=current_user.id, goods='')
+            db_sess.add(order_)
+            db_sess.commit()
+            session['current_order'] = order_.id
+            current_order = order_
+    if not current_order.goods:
+        current_order.goods = f'{id_}, '
+    else:
+        current_order.goods += f'{id_}, '
+    db_sess.commit()
+    return redirect('/order/')
+
+
+@app.route('/order/', methods={'GET', 'POST'})
+def order():
+    form = OrderForm()
+    db_sess = db_session.create_session()
+    current_order = db_sess.get(Order, session['current_order'])
+    if not current_order or 'current_order' not in session:
+        current_order = db_sess.query(Order).filter(Order.user_id == current_user.id).first()
+        if current_order and not current_order.completed:
+            session['current_order'] = current_order.id
+        else:
+            order_ = Order(user_id=current_user.id, goods='')
+            db_sess.add(order_)
+            db_sess.commit()
+            session['current_order'] = order_.id
+            current_order = order_
+    if form.validate_on_submit():
+        if current_order.completed:
+            abort(500)
+        current_order.delivery_date = form.date.data
+        current_order.completed = True
+        db_sess.commit()
+        return redirect('/order/success/')
+    goods_list = []
+    for i in current_order.goods.split(', '):
+        if i.isdigit():
+            goods_list.append(db_sess.get(Goods, int(i)))
+    goods_list.sort(key=lambda goods_: goods_.name)
+    total_price = sum(goods_.price for goods_ in goods_list)
+    kwargs = {
+        'order': current_order,
+        'goods_list': goods_list,
+        'total_price': total_price,
+        'form': form,
+    }
+    return render_template('order.html', **kwargs)
+
+
+@app.route('/order/success/')
+def successful_order():
+    return render_template('succesful_order.html', title='Заказ оформлен!')
 
 
 @app.route('/')

@@ -2,7 +2,17 @@
 {% block content %}
 	<p>
 		<div class="container-lg">
-			<img src="{{ goods.image }}" class="img-fluid">
+			<div align="center">
+				<img src="{{ goods.image }}" class="img-fluid">
+			</div>
+			<h1> {{ goods.name }} </h1> <br>
+			<h4> Описание </h4>
+			<p>
+				{{ goods.desc }}
+			</p>
+			<form action="/add_to_order/{{ goods.id }}" method="post">
+				<input type="submit" class="btn btn-primary" value="Добавить в корзину">
+			</form>
 		</div>
 	</p>
 {% endblock %}

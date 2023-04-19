@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+	<h1 align="center"> Ваша корзина </h1>
+	<h3> Список товаров </h3>
+	<ul class="list-group list-group-flush">
+		{% for goods in goods_list %}
+			<li class="list-group-item list-group-item-action">
+				<a href="/goods/{{ goods.id }}"> {{ goods.name }} </a>
+				<span style="float: right"> Цена: {{ goods.price }} &#8381; </span>
+			</li>
+		{% endfor %}
+			<li class="list-group-item list-group-item-action">
+				<span style="float: right"> Итого: {{ total_price }} &#8381; </span>
+			</li>
+	</ul>
+	<form action="" method="post">
+		{{ form.hidden_tag() }}
+		<p>
+			{{ form.date.label }} <br>
+			{{ form.date(class="form-control") }} <br>
+			{% for error in form.date.errors %}
+				<p class="alert alert-danger"> {{ error }} </p>
+			{% endfor %}
+		</p>
+		<p> {{ form.submit(type="submit", class="btn btn-primary") }} </p>
+	</form>
+{% endblock %}
