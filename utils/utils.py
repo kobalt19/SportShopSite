@@ -1,10 +1,6 @@
 PICS = {
     1: 'krossi.jpg',
-    2: 'krossi.jpg',
-    3: 'krossi.jpg',
-    4: 'krossi.jpg',
-    5: 'krossi.jpg',
-    6: 'ntennis.jpg'
+    2: 'ntennis.jpg'
 }
 
 

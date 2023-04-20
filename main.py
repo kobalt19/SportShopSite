@@ -33,7 +33,7 @@ def unauthorized():
     return render_template('error.html', message='У вас нет права на доступ к этой странице!')
 
 
-@app.route('/register/', methods={'GET', 'POST'})
+@app.route('/register', methods={'GET', 'POST'})
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
@@ -51,11 +51,11 @@ def register():
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
-        return redirect('/login/')
+        return redirect('/login')
     return render_template('register.html', title='Регистрация', form=form)
 
 
-@app.route('/login/', methods={'GET', 'POST'})
+@app.route('/login', methods={'GET', 'POST'})
 def login():
     form = LoginForm()
     if form.validate_on_submit():
@@ -68,14 +68,14 @@ def login():
     return render_template('login.html', title='Авторизация', form=form)
 
 
-@app.route('/logout/')
+@app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect('/')
 
 
-@app.route('/add_goods/', methods={'GET', 'POST'})
+@app.route('/add_goods', methods={'GET', 'POST'})
 @login_required
 def add_goods():
     form = GoodsForm()
@@ -95,7 +95,7 @@ def add_goods():
             new_goods.set_image()
             db_sess.commit()
         except sa.exc.IntegrityError:
-            return render_template('conflict.html')
+            return render_template('error.html', message='Товар с таким именем уже есть в базе данных!')
         return redirect('/')
     return render_template('add_goods.html', title='Добавление товара', form=form)
 
@@ -109,7 +109,7 @@ def goods(id_):
     return render_template('goods.html', goods=found_goods)
 
 
-@app.route('/catalogue/')
+@app.route('/catalogue')
 def catalogue():
     db_sess = db_session.create_session()
     goods_list = db_sess.query(Goods).all()
@@ -129,26 +129,47 @@ def catalogue():
 @app.route('/add_to_order/<int:id_>', methods={'POST'})
 def add_to_order(id_):
     db_sess = db_session.create_session()
-    current_order = db_sess.get(Order, session['current_order'])
-    if not current_order or 'current_order' not in session:
+    current_order = None
+    if 'current_order' in session:
+        current_order = db_sess.get(Order, session['current_order'])
+    if not current_order:
         current_order = db_sess.query(Order).filter(Order.user_id == current_user.id).first()
         if current_order:
             session['current_order'] = current_order.id
         else:
-            order_ = Order(user_id=current_user.id, goods='')
+            order_ = Order(user_id=current_user.id)
             db_sess.add(order_)
             db_sess.commit()
             session['current_order'] = order_.id
             current_order = order_
-    if not current_order.goods:
-        current_order.goods = f'{id_}, '
-    else:
-        current_order.goods += f'{id_}, '
+    goods_ = db_sess.get(Goods, id_)
+    if not goods_:
+        return render_template('error.html', message='Товар по указанному id не найден!')
+    current_order.goods_list.append(goods_)
     db_sess.commit()
-    return redirect('/order/')
+    return redirect('/order')
 
 
-@app.route('/order/', methods={'GET', 'POST'})
+@app.route('/remove_from_order/<int:id_>', methods={'GET', 'POST'})
+def remove_from_order(id_):
+    db_sess = db_session.create_session()
+    if 'current_order' not in session:
+        return render_template('error.html', message='У вас нет активной корзины!')
+    current_order = db_sess.get(Order, session['current_order'])
+    if not current_order:
+        return render_template('error.html', message='Не найдена активная корзина!')
+    goods_ = db_sess.get(Goods, id_)
+    if not goods_:
+        return render_template('error.html', message='Товар по указанному id не найден!')
+    try:
+        current_order.goods_list.remove(goods_)
+    except BaseException as err:
+        print(err.__class__.__name__, err)
+    db_sess.commit()
+    return redirect('/order')
+
+
+@app.route('/order', methods={'GET', 'POST'})
 def order():
     form = OrderForm()
     db_sess = db_session.create_session()
@@ -169,12 +190,8 @@ def order():
         current_order.delivery_date = form.date.data
         current_order.completed = True
         db_sess.commit()
-        return redirect('/order/success/')
-    goods_list = []
-    for i in current_order.goods.split(', '):
-        if i.isdigit():
-            goods_list.append(db_sess.get(Goods, int(i)))
-    goods_list.sort(key=lambda goods_: goods_.name)
+        return redirect('/order/success')
+    goods_list = sorted(current_order.goods_list, key=lambda goods_: goods_.name)
     total_price = sum(goods_.price for goods_ in goods_list)
     kwargs = {
         'order': current_order,
@@ -185,7 +202,7 @@ def order():
     return render_template('order.html', **kwargs)
 
 
-@app.route('/order/success/')
+@app.route('/order/success')
 def successful_order():
     return render_template('succesful_order.html', title='Заказ оформлен!')
 

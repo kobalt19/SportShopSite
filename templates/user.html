@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2> Список заказов пользователя {{ user.name }} </h2>
+    {% for order in user.orders %}
+    {% endfor %}
+{% endblock %}

@@ -7,6 +7,9 @@
 			<li class="list-group-item list-group-item-action">
 				<a href="/goods/{{ goods.id }}"> {{ goods.name }} </a>
 				<span style="float: right"> Цена: {{ goods.price }} &#8381; </span>
+				<form action="/remove_from_order/{{ goods.id }}" method="post">
+					<input type="submit" class="btn btn-secondary" value="Удалить">
+				</form>
 			</li>
 		{% endfor %}
 			<li class="list-group-item list-group-item-action">

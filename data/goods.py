@@ -1,6 +1,14 @@
 import sqlalchemy as sa
+from sqlalchemy import orm
 from .db_session import SqlAlchemyBase
 from utils.utils import get_pic_by_id
+
+association_table = sa.Table(
+    'association_order_goods',
+    SqlAlchemyBase.metadata,
+    sa.Column('orders', sa.Integer, sa.ForeignKey('orders.id')),
+    sa.Column('goods_list', sa.Integer, sa.ForeignKey('goods.id'))
+)
 
 
 class Goods(SqlAlchemyBase):
