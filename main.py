@@ -33,7 +33,7 @@ def unauthorized():
     return render_template('error.html', message='У вас нет права на доступ к этой странице!')
 
 
-@app.route('/register', methods={'GET', 'POST'})
+@app.route('/register/', methods={'GET', 'POST'})
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
@@ -55,7 +55,7 @@ def register():
     return render_template('register.html', title='Регистрация', form=form)
 
 
-@app.route('/login', methods={'GET', 'POST'})
+@app.route('/login/', methods={'GET', 'POST'})
 def login():
     form = LoginForm()
     if form.validate_on_submit():
@@ -68,14 +68,14 @@ def login():
     return render_template('login.html', title='Авторизация', form=form)
 
 
-@app.route('/logout')
+@app.route('/logout/')
 @login_required
 def logout():
     logout_user()
     return redirect('/')
 
 
-@app.route('/add_goods', methods={'GET', 'POST'})
+@app.route('/add_goods/', methods={'GET', 'POST'})
 @login_required
 def add_goods():
     form = GoodsForm()
@@ -109,7 +109,7 @@ def goods(id_):
     return render_template('goods.html', goods=found_goods)
 
 
-@app.route('/catalogue')
+@app.route('/catalogue/')
 def catalogue():
     db_sess = db_session.create_session()
     goods_list = db_sess.query(Goods).all()
@@ -129,6 +129,8 @@ def catalogue():
 @app.route('/add_to_order/<int:id_>', methods={'POST'})
 def add_to_order(id_):
     db_sess = db_session.create_session()
+    if not current_user.is_authenticated:
+        return render_template('error.html', message='Сначала войдите в свой аккаунт!')
     current_order = None
     if 'current_order' in session:
         current_order = db_sess.get(Order, session['current_order'])
@@ -169,7 +171,7 @@ def remove_from_order(id_):
     return redirect('/order')
 
 
-@app.route('/order', methods={'GET', 'POST'})
+@app.route('/order/', methods={'GET', 'POST'})
 def order():
     form = OrderForm()
     db_sess = db_session.create_session()
@@ -202,7 +204,7 @@ def order():
     return render_template('order.html', **kwargs)
 
 
-@app.route('/order/success')
+@app.route('/order/success/')
 def successful_order():
     return render_template('succesful_order.html', title='Заказ оформлен!')
 
