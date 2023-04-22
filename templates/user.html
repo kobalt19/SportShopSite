@@ -1,6 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-    <h2> Список заказов пользователя {{ user.name }} </h2>
-    {% for order in user.orders %}
-    {% endfor %}
+    <h1> {{ user.name }} (Почта {{ user.email }}) </h1>
+    <a type="button" class="btn btn-secondary position-relative start-100" href="/logout/" > Выйти из аккаунта </a>
+    <h2> Список заказов </h2>
+    <ul class="list-group list-group-flush">
+        {% for order in user.orders_list %}
+        <li class="list-group-item list-group-item-action">
+            <a class="fs-5" href="/order/{{ order.id }}">Заказ №{{ order.id }}</a>
+            <span class="fs-6">
+                {% if order.completed %}
+                    (Оформлен)
+                {% else %}
+                    (Не оформлен)
+                {% endif %}
+            </span>
+            <span style="float: right;"> Общая стоимость: {{ next(costs) }} &#8381; </span>
+            <div class="fs-6">
+                {% for goods in order.goods_list %}
+                    - {{ goods.name }} <br>
+                {% endfor %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
 {% endblock %}

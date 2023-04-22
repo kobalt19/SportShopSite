@@ -28,7 +28,7 @@
     				</ul>
     			</div>
 				{% if current_user.is_authenticated %}
-					<a class="navbar-brand justify-content-end text-light" href="/logout">
+					<a class="navbar-brand justify-content-end text-light" href="/user/{{ current_user.id }}">
 						{{ current_user.name }}
 					</a>
 				{% else %}
