@@ -1,12 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
     <h2 style="align: center;"> Главная страница </h2>
-    <div class="card-group">
-        <div class="card text-bg-dark">
-            <img src="/static/img/krossi.jpg" class="card-img">
-            <div class="card-img-overlay">
-                <h5 class="card-title"> Каталог </h5>
+    <div class="card-group row">
+        <div class="col">
+            <div class="card text-bg-dark">
+                <img src="/static/img/krossi.jpg" class="card-img">
+                <div class="card-img-overlay">
+                    <a class="card-title fs-4" href="/catalogue/"> Каталог</a>
+                </div>
             </div>
         </div>
+        {% if current_user.is_authenticated %}
+            <div class="col">
+                <div class="card">
+                    <a class="card-title fs-4" href="/user/{{ current_user.id }}"> Ваши заказы </a>
+                </div>
+            </div>
+        {% endif %}
     </div>
 {% endblock %}

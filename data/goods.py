@@ -1,5 +1,4 @@
 import sqlalchemy as sa
-from sqlalchemy import orm
 from .db_session import SqlAlchemyBase
 from utils.utils import get_pic_by_id
 
