@@ -3,6 +3,7 @@ from flask import abort, Flask, jsonify, render_template, redirect, request, ses
 from flask_login import AnonymousUserMixin, current_user, LoginManager, login_required, login_user, logout_user, \
     UserMixin
 from data import db_session
+from data.category import Category
 from data.goods import Goods
 from data.order import Order
 from data.users import User
@@ -29,7 +30,7 @@ def load_user(user_id):
 
 
 @app.errorhandler(401)
-def unauthorized():
+def unauthorized(err):
     return render_template('error.html', message='У вас нет права на доступ к этой странице!')
 
 
@@ -80,12 +81,18 @@ def add_goods():
     if not current_user.is_authenticated or current_user.id != 1:
         return unauthorized()
     if form.validate_on_submit():
+        category_name = form.category.data
+        category = db_sess.query(Category).filter(Category.name == category_name).first()
+        if not category:
+            category = Category(name=category_name)
+            db_sess.add(category)
+            db_sess.commit()
         new_goods = Goods(
             name=form.name.data,
-            category=form.category.data,
             desc=form.description.data,
             price=form.price.data,
         )
+        new_goods.categories.append(category)
         try:
             db_sess.add(new_goods)
             db_sess.commit()
@@ -107,13 +114,7 @@ def goods(id_):
 
 @app.route('/catalogue/')
 def catalogue():
-    goods_list = db_sess.query(Goods).all()
-    categories = {}
-    for goods_ in goods_list:
-        if goods_.category not in categories:
-            categories[goods_.category] = [goods_]
-        else:
-            categories[goods_.category].append(goods_)
+    categories = {category.name: category.goods for category in db_sess.query(Category).all()}
     kwargs = {
         'title': 'Каталог',
         'catalogue': categories,
@@ -121,7 +122,7 @@ def catalogue():
     return render_template('catalogue.html', **kwargs)
 
 
-@app.route('/add_to_order/<int:id_>', methods={'POST'})
+@app.route('/add_to_order/<int:id_>', methods={'GET', 'POST'})
 def add_to_order(id_):
     if not current_user.is_authenticated:
         return render_template('error.html', message='Сначала войдите в свой аккаунт!')

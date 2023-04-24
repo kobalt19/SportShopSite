@@ -3,11 +3,11 @@
     {% for category in catalogue %}
         <p>
             <div class="container">
-                <h2> {{ category }} </h2>
-                <div class="row row-cols-md-6">
+                <a class="fs-2" href="/category/{{ category.id }}"> {{ category }} </a>
+                <div class="row row-cols-1">
                     {% for goods in catalogue[category] %}
                         {% if loop.index <= 6 %}
-                            <div class="col">
+                            <div class="col-sm-6">
                                 <div class="card">
                                     <img src="{{ goods.image }}" class="card-img-top">
                                     <div class="card-body">

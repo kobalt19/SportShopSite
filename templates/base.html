@@ -25,6 +25,11 @@
     					<li class="navbar-item">
     						<a class="nav-link text-light" href="/catalogue"> Каталог </a>
     					</li>
+						{% if current_user.id == 1 %}
+							<li class="navbar-item">
+								<a class="btn btn-outline-light" href="/add_goods/" type="button"> Добавить товар </a>
+							</li>
+						{% endif %}
     				</ul>
     			</div>
 				{% if current_user.is_authenticated %}
