@@ -1,5 +1,6 @@
 import sqlalchemy as sa
 from sqlalchemy import orm
+from sqlalchemy_serializer import SerializerMixin
 from .db_session import SqlAlchemyBase
 from utils.utils import get_pic_by_id
 
@@ -11,7 +12,7 @@ association_table = sa.Table(
 )
 
 
-class Goods(SqlAlchemyBase):
+class Goods(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'goods'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String, unique=True, nullable=True)

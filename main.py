@@ -2,7 +2,7 @@ import datetime as dt
 from flask import abort, Flask, jsonify, render_template, redirect, request, session
 from flask_login import AnonymousUserMixin, current_user, LoginManager, login_required, login_user, logout_user, \
     UserMixin
-from data import db_session
+from data import db_session, goods_api
 from data.category import Category
 from data.goods import Goods
 from data.order import Order
@@ -14,13 +14,14 @@ import sqlalchemy as sa
 import sqlalchemy.exc
 
 app = Flask(__name__)
+app.register_blueprint(goods_api.api)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 app.config['PERMANENT_SESSION_LIFETIME'] = dt.timedelta(days=365)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-db_session.global_init('db/sports.db')
+db_session.global_init('db/data.db')
 db_sess = db_session.create_session()
 
 

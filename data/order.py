@@ -1,5 +1,6 @@
 import datetime as dt
 import sqlalchemy as sa
+from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy import orm
 from .db_session import SqlAlchemyBase
 
@@ -11,7 +12,7 @@ association_table = sa.Table(
 )
 
 
-class Order(SqlAlchemyBase):
+class Order(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'orders'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'))
