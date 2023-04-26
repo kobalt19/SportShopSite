@@ -3,16 +3,20 @@
     {% for category in catalogue %}
         <p>
             <div class="container">
-                <a class="fs-2" href="/category/{{ category.id }}"> {{ category }} </a>
-                <div class="row row-cols-1">
-                    {% for goods in catalogue[category] %}
-                        {% if loop.index <= 6 %}
-                            <div class="col-sm-6">
-                                <div class="card">
+                <a class="fs-2" href="/category/{{ category.id }}"> {{ category.name }} </a>
+                <div class="row row-cols-4 row-cols-md-4">
+                    {% for goods in category.goods %}
+                        {% if loop.index <= 4 %}
+                            <div class="col">
+                                <div class="card h-100" style="width: 20rem;">
                                     <img src="{{ goods.image }}" class="card-img-top">
                                     <div class="card-body">
                                         <h5 class="card-title"> {{ goods.name }} </h5>
-                                        <p class="card-text"> {{ goods.desc }} </p>
+                                        {% if len(goods.desc) > 130 %}
+                                            <p class="card-text"> {{ goods.desc[:131] + "..." }} </p>
+                                        {% else %}
+                                            <p class="card-text"> {{ goods.desc }} </p>
+                                        {% endif %}
                                         <a href="/goods/{{ goods.id }}" class="card-link"> Посмотреть </a>
                                     </div>
                                 </div>

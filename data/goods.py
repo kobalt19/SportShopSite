@@ -2,7 +2,6 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 from sqlalchemy_serializer import SerializerMixin
 from .db_session import SqlAlchemyBase
-from utils.utils import get_pic_by_id
 
 association_table = sa.Table(
     'association_order_goods',
@@ -20,6 +19,3 @@ class Goods(SqlAlchemyBase, SerializerMixin):
     price = sa.Column(sa.Double, nullable=True)
     image = sa.Column(sa.String, nullable=True)
     categories = orm.relationship('Category', secondary='association_category_goods', backref='goods')
-
-    def set_image(self):
-        self.image = get_pic_by_id(self.id)

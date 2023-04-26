@@ -1,22 +1,30 @@
+import os
 import datetime as dt
-from flask import abort, Flask, jsonify, render_template, redirect, request, session
-from flask_login import AnonymousUserMixin, current_user, LoginManager, login_required, login_user, logout_user, \
-    UserMixin
-from data import db_session, goods_api
+from flask import abort, Flask, render_template, redirect, session
+from flask_login import current_user, LoginManager, login_required, login_user, logout_user
+from flask_restful import Api
+from data import db_session
 from data.category import Category
 from data.goods import Goods
+from data.goods_resources import GoodsResource, GoodsListResource
 from data.order import Order
 from data.users import User
+from forms.category import CategoryForm
 from forms.goods import GoodsForm
 from forms.order import OrderForm
 from forms.user import LoginForm, RegisterForm
 import sqlalchemy as sa
 import sqlalchemy.exc
+from werkzeug.utils import secure_filename
+from wtforms import SelectField
 
 app = Flask(__name__)
-app.register_blueprint(goods_api.api)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 app.config['PERMANENT_SESSION_LIFETIME'] = dt.timedelta(days=365)
+api = Api(app)
+api.add_resource(GoodsListResource, '/api/goods')
+api.add_resource(GoodsResource, '/api/goods/<int:id_>')
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -50,8 +58,11 @@ def register():
             email=form.email.data,
         )
         user.set_password(form.password.data)
-        db_sess.add(user)
-        db_sess.commit()
+        try:
+            db_sess.add(user)
+            db_sess.commit()
+        except BaseException as err:
+            raise err
         return redirect('/login')
     return render_template('register.html', title='Регистрация', form=form)
 
@@ -79,29 +90,42 @@ def logout():
 @login_required
 def add_goods():
     form = GoodsForm()
+    form.category.choices = sorted(c.name for c in db_sess.query(Category).all())
     if not current_user.is_authenticated or current_user.id != 1:
         return unauthorized()
     if form.validate_on_submit():
         category_name = form.category.data
         category = db_sess.query(Category).filter(Category.name == category_name).first()
+        assets_dir = os.path.join(os.path.dirname(app.instance_path), 'static/img')
+        image = form.image.data
+        image_filename = secure_filename(image.filename)
+        image_path = os.path.join(assets_dir, image_filename)
+        image.save(image_path)
         if not category:
             category = Category(name=category_name)
-            db_sess.add(category)
-            db_sess.commit()
+            try:
+                db_sess.add(category)
+                db_sess.commit()
+            except BaseException as err:
+                db_sess.rollback()
+                raise err
         new_goods = Goods(
             name=form.name.data,
             desc=form.description.data,
             price=form.price.data,
         )
         new_goods.categories.append(category)
+        new_goods.image = os.path.relpath(image_path, 'templates')
         try:
             db_sess.add(new_goods)
             db_sess.commit()
-            new_goods.set_image()
-            db_sess.commit()
         except sa.exc.IntegrityError:
+            db_sess.rollback()
             return render_template('error.html', message='Товар с таким именем уже есть в базе данных!')
-        return redirect('/')
+        except BaseException as err:
+            db_sess.rollback()
+            raise err
+        return render_template('success.html', title='Товар добавлен!', message='Вы успешно добавили товар!')
     return render_template('add_goods.html', title='Добавление товара', form=form)
 
 
@@ -115,15 +139,15 @@ def goods(id_):
 
 @app.route('/catalogue/')
 def catalogue():
-    categories = {category.name: category.goods for category in db_sess.query(Category).all()}
     kwargs = {
         'title': 'Каталог',
-        'catalogue': categories,
+        'catalogue': db_sess.query(Category).all(),
+        'len': len,
     }
     return render_template('catalogue.html', **kwargs)
 
 
-@app.route('/add_to_order/<int:id_>', methods={'GET', 'POST'})
+@app.route('/add_to_order/<int:id_>', methods={'POST'})
 def add_to_order(id_):
     if not current_user.is_authenticated:
         return render_template('error.html', message='Сначала войдите в свой аккаунт!')
@@ -136,19 +160,27 @@ def add_to_order(id_):
             session['current_order'] = current_order.id
         else:
             order_ = Order(user_id=current_user.id)
-            db_sess.add(order_)
-            db_sess.commit()
+            try:
+                db_sess.add(order_)
+                db_sess.commit()
+            except BaseException as err:
+                db_sess.rollback()
+                raise err
             session['current_order'] = order_.id
             current_order = order_
     goods_ = db_sess.get(Goods, id_)
     if not goods_:
         return render_template('error.html', message='Товар по указанному id не найден!')
-    current_order.goods_list.append(goods_)
-    db_sess.commit()
-    return redirect('/order')
+    try:
+        current_order.goods_list.append(goods_)
+        db_sess.commit()
+        return redirect('/order')
+    except BaseException as err:
+        db_sess.rollback()
+        raise err
 
 
-@app.route('/remove_from_order/<int:id_>', methods={'GET', 'POST'})
+@app.route('/remove_from_order/<int:id_>', methods={'POST'})
 def remove_from_order(id_):
     if 'current_order' not in session:
         return render_template('error.html', message='У вас нет активной корзины!')
@@ -160,9 +192,10 @@ def remove_from_order(id_):
         return render_template('error.html', message='Товар по указанному id не найден!')
     try:
         current_order.goods_list.remove(goods_)
+        db_sess.commit()
     except BaseException as err:
-        print(err.__class__.__name__, err)
-    db_sess.commit()
+        db_sess.rollback()
+        raise err
     return redirect('/order/')
 
 
@@ -178,8 +211,12 @@ def order():
             session['current_order'] = current_order.id
         else:
             order_ = Order(user_id=current_user.id, goods='')
-            db_sess.add(order_)
-            db_sess.commit()
+            try:
+                db_sess.add(order_)
+                db_sess.commit()
+            except BaseException as err:
+                db_sess.rollback()
+                raise err
             session['current_order'] = order_.id
             current_order = order_
     if form.validate_on_submit():
@@ -187,9 +224,13 @@ def order():
             abort(500)
         current_order.delivery_date = form.date.data
         current_order.completed = True
-        current_user.orders_list.append(current_order)
-        db_sess.commit()
-        return redirect('/order/success/')
+        try:
+            current_user.orders_list.append(current_order)
+            db_sess.commit()
+        except BaseException as err:
+            db_sess.rollback()
+            raise err
+        return render_template('success.html', title='Заказ оформлен!', message='Вы успешно оформили заказ!')
     goods_list = sorted(current_order.goods_list, key=lambda goods_: goods_.name)
     total_price = sum(goods_.price for goods_ in goods_list)
     kwargs = {
@@ -219,11 +260,6 @@ def show_order(id_):
     return render_template('order.html', **kwargs)
 
 
-@app.route('/order/success/')
-def successful_order():
-    return render_template('succesful_order.html', title='Заказ оформлен!')
-
-
 @app.route('/user/<int:id_>')
 def user_page(id_):
     if not current_user.is_authenticated or id_ not in {1, current_user.id}:
@@ -237,6 +273,31 @@ def user_page(id_):
         'next': next,
     }
     return render_template('user.html', **kwargs)
+
+
+@app.route('/add_category/', methods={'GET', 'POST'})
+def add_category():
+    form = CategoryForm()
+    if not current_user.is_authenticated or current_user.id != 1:
+        return unauthorized()
+    if form.validate_on_submit():
+        category = Category(name=form.name.data)
+        try:
+            db_sess.add(category)
+            db_sess.commit()
+        except BaseException as err:
+            db_sess.rollback()
+            raise err
+        return render_template('success.html', title='Категория добавлена!', message='Вы успешно добавили категорию!')
+    return render_template('add_category.html', form=form, title='Добавление категории')
+
+
+@app.route('/category/<int:id_>')
+def category(id_):
+    category_ = db_sess.get(Category, id_)
+    if not category_:
+        return render_template('error.html', title='Ошибка!', message='Категория с указанным id не найдена!')
+    return render_template('category.html', title=f'Список товаров категории {category_.name}', category=category_)
 
 
 @app.route('/')

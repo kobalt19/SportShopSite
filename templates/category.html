@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2> {{ category.name }} </h2>
+    <ul class="list-group list-group-flush">
+		{% for goods in category.goods %}
+			<li class="list-group-item list-group-item-action">
+				<div class="card h-100" style="width: 15rem;">
+					<img src="{{ goods.image }}" class="card-img-top">
+					<div class="card-body">
+                    	<h5 class="card-title"> {{ goods.name }} </h5>
+                    	<p class="card-text"> {{ goods.desc }} </p>
+                    	<a href="/goods/{{ goods.id }}" class="card-link"> Посмотреть </a>
+                	</div>
+				</div>
+			</li>
+		{% endfor %}
+	</ul>
+{% endblock %}
