@@ -1,5 +1,6 @@
-import os
 import datetime as dt
+import os
+import random
 from flask import abort, Flask, render_template, redirect, session
 from flask_login import current_user, LoginManager, login_required, login_user, logout_user
 from flask_restful import Api
@@ -15,8 +16,6 @@ from forms.order import OrderForm
 from forms.user import LoginForm, RegisterForm
 import sqlalchemy as sa
 import sqlalchemy.exc
-from werkzeug.utils import secure_filename
-from wtforms import SelectField
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
@@ -241,8 +240,6 @@ def order():
         'total_price': total_price,
         'form': form,
     }
-    if current_user.id == 1:
-        print(current_order.id)
     return render_template('order.html', **kwargs)
 
 
@@ -322,8 +319,10 @@ def delete_goods(id_):
 
 @app.route('/')
 def index():
+    goods_ = random.choice(db_sess.query(Goods).all())
     kwargs = {
         'title': 'SportShopSite',
+        'goods_cap': goods_.image,
     }
     return render_template('index.html', **kwargs)
 
