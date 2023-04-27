@@ -13,6 +13,11 @@
 			<form action="/add_to_order/{{ goods.id }}" method="post">
 				<input type="submit" class="btn btn-primary" value="Добавить в корзину">
 			</form>
+			{% if current_user.id == 1 %}
+				<form action="/delete_goods/{{ goods.id }}" method="post">
+					<input type="submit" class="btn btn-danger" value="Удалить товар">
+				</form>
+			{% endif %}
 		</div>
 	</p>
 {% endblock %}

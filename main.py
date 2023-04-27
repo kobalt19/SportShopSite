@@ -92,15 +92,12 @@ def add_goods():
     form = GoodsForm()
     form.category.choices = sorted(c.name for c in db_sess.query(Category).all())
     if not current_user.is_authenticated or current_user.id != 1:
-        return unauthorized()
+        abort(401)
     if form.validate_on_submit():
         category_name = form.category.data
         category = db_sess.query(Category).filter(Category.name == category_name).first()
         assets_dir = os.path.join(os.path.dirname(app.instance_path), 'static/img')
         image = form.image.data
-        image_filename = secure_filename(image.filename)
-        image_path = os.path.join(assets_dir, image_filename)
-        image.save(image_path)
         if not category:
             category = Category(name=category_name)
             try:
@@ -114,14 +111,19 @@ def add_goods():
             desc=form.description.data,
             price=form.price.data,
         )
-        new_goods.categories.append(category)
-        new_goods.image = os.path.relpath(image_path, 'templates')
         try:
             db_sess.add(new_goods)
             db_sess.commit()
-        except sa.exc.IntegrityError:
+            image_filename_ext = image.filename.split('.')[-1]
+            image_filename = f'{new_goods.id}.{image_filename_ext}'
+            image_path = os.path.join(assets_dir, image_filename)
+            image.save(image_path)
+            new_goods.categories.append(category)
+            new_goods.image = os.path.relpath(image_path, 'templates')
+            db_sess.commit()
+        except sa.exc.IntegrityError as err:
             db_sess.rollback()
-            return render_template('error.html', message='Товар с таким именем уже есть в базе данных!')
+            return render_template('error.html', message=str(err))
         except BaseException as err:
             db_sess.rollback()
             raise err
@@ -298,6 +300,24 @@ def category(id_):
     if not category_:
         return render_template('error.html', title='Ошибка!', message='Категория с указанным id не найдена!')
     return render_template('category.html', title=f'Список товаров категории {category_.name}', category=category_)
+
+
+@app.route('/delete_goods/<int:id_>', methods={'POST'})
+def delete_goods(id_):
+    if current_user.id != 1:
+        return render_template('error.html', title='Ошибка!', message='У вас нет права на удаление товаров!')
+    goods_ = db_sess.get(Goods, id_)
+    if not goods_:
+        return render_template('error.html', title='Ошибка!', message='Товар с указанным id не найден!')
+    try:
+        image_path = os.path.join(app.instance_path, os.path.normpath(goods_.image))
+        os.remove(image_path)
+        db_sess.delete(goods_)
+        db_sess.commit()
+        return render_template('success.html', title='Товар удалён!', message='Вы успешно удалили товар!')
+    except BaseException as err:
+        db_sess.rollback()
+        raise err
 
 
 @app.route('/')
